@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'git@github.com:your-repo/project.git'
+                git branch: 'main', url: 'https://github.com/ShivaniNarula29/test_dynamic_flow.git'
             }
         }
 
