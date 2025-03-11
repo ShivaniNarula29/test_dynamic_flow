@@ -4,7 +4,6 @@ pipeline {
     environment {
         AWS_CREDENTIALS = credentials('aws-creds')
         SSH_KEY = credentials('ec2-ssh-key')
-        ANSIBLE_HOST_KEY_CHECKING = 'False'
     }
 
     stages {
@@ -27,7 +26,20 @@ pipeline {
             }
         }
 
-        stage('Ansible Playbook Execution') {
+        stage('Export Terraform Outputs') {
+            steps {
+                dir('infra') {
+                    script {
+                        env.VPC_ID = sh(script: "terraform output -raw vpc_id", returnStdout: true).trim()
+                        env.PUBLIC_SUBNET_ID = sh(script: "terraform output -raw public_subnet_id", returnStdout: true).trim()
+                        env.PRIVATE_SUBNET_ID = sh(script: "terraform output -raw private_subnet_id", returnStdout: true).trim()
+                        env.INSTANCE_PUBLIC_IP = sh(script: "terraform output -raw instance_public_ip", returnStdout: true).trim()
+                    }
+                }
+            }
+        }
+
+        stage('Run Ansible Playbook') {
             steps {
                 dir('ansible') {
                     withCredentials([sshUserPrivateKey(credentialsId: "${SSH_KEY}", keyFileVariable: 'SSH_KEY_PATH')]) {
