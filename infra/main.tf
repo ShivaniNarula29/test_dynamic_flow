@@ -2,9 +2,27 @@ provider "aws" {
   region = var.region
 }
 
+# VPC Creation
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+}
+
+# Public Subnet
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+}
+
+# Private Subnet
+resource "aws_subnet" "private" {
+  vpc_id     = aws_vpc.main.id
+  cidr_block = "10.0.2.0/24"
+}
+
+# Security Group
 resource "aws_security_group" "prometheus_sg" {
-  name   = "prometheus-sg"
-  vpc_id = var.vpc_id
+  vpc_id = aws_vpc.main.id
 
   ingress {
     from_port   = 9090
@@ -21,36 +39,16 @@ resource "aws_security_group" "prometheus_sg" {
   }
 }
 
-resource "aws_instance" "public" {
-  ami             = var.prometheus_ami
-  instance_type   = var.instance_type
-  subnet_id       = var.public_subnet_id
-  key_name        = var.key_name
+# EC2 Instance
+resource "aws_instance" "prometheus" {
+  ami           = var.prometheus_ami
+  instance_type = var.instance_type
+  subnet_id     = aws_subnet.public.id
+  key_name      = var.key_name
   security_groups = [aws_security_group.prometheus_sg.name]
 
   tags = {
-    Name = "prometheus-public"
+    Name = "prometheus"
     Role = "prometheus"
   }
-}
-
-resource "aws_instance" "private" {
-  ami             = var.prometheus_ami
-  instance_type   = var.instance_type
-  subnet_id       = var.private_subnet_id
-  key_name        = var.key_name
-  security_groups = [aws_security_group.prometheus_sg.name]
-
-  tags = {
-    Name = "prometheus-private"
-    Role = "prometheus"
-  }
-}
-
-output "public_ips" {
-  value = aws_instance.public.public_ip
-}
-
-output "private_ips" {
-  value = aws_instance.private.private_ip
 }
